@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>brandgen — find an open .com</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #161f3a;
+    --ink-2: #5d6680;
+    --paper-a: #edeef2;
+    --paper-b: #e6e8ef;
+    --card: #ffffff;
+    --line: #e3e5ec;
+    --accent: #4b45e0;
+    --accent-ink: #ffffff;
+    --accent-soft: #ecebfc;
+    --ok: #157f43;
+    --ok-bg: #e6f4ea;
+    --ok-bar: #2ba35e;
+    --no: #a8473c;
+    --no-bg: #f5e9e7;
+    --maybe: #8f6a12;
+    --maybe-bg: #f5eed7;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(168deg, var(--paper-a) 0%, var(--paper-b) 100%);
+    color: var(--ink);
+    font-family: "Inter", system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 660px; margin: 0 auto; padding: 56px 22px 96px; }
+
+  /* Masthead */
+  .mark {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin-bottom: 26px;
+  }
+  .mark .dot { color: var(--ink-2); }
+  h1 {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    font-size: clamp(34px, 7vw, 48px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { font-size: 17px; color: var(--ink-2); margin: 0 0 36px; max-width: 46ch; }
+
+  /* Search panel */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(22,31,58,0.04), 0 12px 32px -18px rgba(22,31,58,0.22);
+  }
+  .field { margin-bottom: 18px; }
+  .field:last-of-type { margin-bottom: 22px; }
+  label {
+    display: block;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 7px;
+  }
+  label .opt { color: var(--ink-2); font-weight: 500; }
+  textarea, .name-input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 13px 15px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--ink);
+    background: #fbfbfd;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .name-input { font-family: "JetBrains Mono", monospace; }
+  textarea { min-height: 82px; resize: vertical; }
+  textarea:focus, .name-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .go {
+    width: 100%;
+    border: none;
+    border-radius: 11px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 14px;
+    cursor: pointer;
+    transition: transform .08s, opacity .15s;
+  }
+  .go:hover { opacity: 0.93; }
+  .go:active { transform: translateY(1px); }
+  .go:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Results */
+  .results { margin-top: 30px; }
+  .status-line {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 16px;
+    margin-bottom: 9px;
+    animation: rise .32s ease both;
+  }
+  .row.ok { border-left-color: var(--ok-bar); }
+  .row.mine { border-color: var(--accent); border-left-color: var(--accent); }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .row { animation: none; } }
+
+  .domain {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 700;
+    font-size: 15.5px;
+    flex: 1;
+    min-width: 0;
+    word-break: break-all;
+  }
+  .domain .tld { color: var(--ink-2); font-weight: 500; }
+  .tag {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .pill {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.no { background: var(--no-bg); color: var(--no); }
+  .pill.maybe { background: var(--maybe-bg); color: var(--maybe); }
+  .claim {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ok);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .claim:hover { text-decoration: underline; }
+  .vbtn {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 5px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .12s;
+  }
+  .vbtn:hover { background: var(--accent-soft); }
+  .vbtn:disabled { opacity: 0.5; cursor: default; }
+
+  /* Variations sub-panel */
+  .vars {
+    margin: -2px 0 12px;
+    padding: 4px 16px 4px 28px;
+    border-left: 2px dashed var(--line);
+    margin-left: 14px;
+  }
+  .vrow {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0;
+  }
+  .vrow .domain { font-size: 14px; }
+  .vnote { font-size: 13px; color: var(--ink-2); padding: 8px 0; }
+
+  .msg { text-align: center; color: var(--ink-2); padding: 30px 0; font-size: 15px; }
+  .err {
+    background: var(--no-bg); color: var(--no);
+    border-radius: 11px; padding: 14px 16px; font-size: 14px;
+  }
+  .spin {
+    display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 8px;
+    border: 2px solid var(--accent-soft); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark">brandgen<span class="dot">.com</span></div>
+  <h1>Find an <em>open</em> .com.</h1>
+  <p class="lede">Describe your idea. We coin brandable names and check each one against the registry live — open names rise to the top.</p>
+
+  <div class="panel">
+    <div class="field">
+      <label for="desc">Your idea</label>
+      <textarea id="desc" placeholder="a coffee subscription for remote workers"></textarea>
+    </div>
+    <div class="field">
+      <label for="desired">A name in mind <span class="opt">— optional, we'll check it too</span></label>
+      <input class="name-input" type="text" id="desired" placeholder="brewdesk">
+    </div>
+    <button class="go" id="go" onclick="generate()">Generate names</button>
+  </div>
+
+  <div class="results" id="results"></div>
+</div>
+</body>
+<script>
+const REGISTRAR = "https://www.namecheap.com/domains/registration/results/?domain=";
+
+async function generate() {
+  const desc = document.getElementById('desc').value.trim();
+  const desired = document.getElementById('desired').value.trim();
+  const out = document.getElementById('results');
+  const btn = document.getElementById('go');
+
+  if (!desc) { out.innerHTML = '<div class="msg">Describe your idea to get started.</div>'; return; }
+
+  btn.disabled = true; btn.textContent = 'Generating…';
+  out.innerHTML = '<div class="msg"><span class="spin"></span>Coining names and checking the registry…</div>';
+
+  try {
+    const resp = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: desc, desired_name: desired || null })
+    });
+    if (!resp.ok) throw new Error('the server returned ' + resp.status);
+    const data = await resp.json();
+    render(data.results || []);
+  } catch (e) {
+    out.innerHTML = '<div class="err">Couldn\'t reach the generator — ' + e.message +
+      '. Check the terminal running uvicorn to see what happened.</div>';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generate names';
+  }
+}
+
+function esc(s){ return s.replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function render(items) {
+  const out = document.getElementById('results');
+  if (!items.length) { out.innerHTML = '<div class="msg">No names came back. Try describing the idea a little differently.</div>'; return; }
+
+  const open = items.filter(i => i.status === 'available').length;
+  let html = '<div class="status-line">' + items.length + ' names · ' + open + ' open for registration</div>';
+
+  items.forEach((it, idx) => {
+    const name = esc(it.name);
+    const isOk = it.status === 'available';
+    const rowCls = 'row' + (isOk ? ' ok' : '') + (it.desired ? ' mine' : '');
+    let right;
+    if (isOk) {
+      right = '<span class="pill ok">Available</span>' +
+              '<a class="claim" href="' + REGISTRAR + name + '.com" target="_blank" rel="noopener">Claim &rarr;</a>';
+    } else if (it.status === 'taken') {
+      right = '<span class="pill no">Taken</span>' +
+              '<button class="vbtn" onclick="findVars(\'' + name + '\', ' + idx + ', this)">Find open variations</button>';
+    } else {
+      right = '<span class="pill maybe">Unknown</span>';
+    }
+    const tag = it.desired ? '<span class="tag">your pick</span>' : '';
+    html += '<div class="' + rowCls + '" style="animation-delay:' + (idx * 28) + 'ms">' +
+              '<span class="domain">' + name + '<span class="tld">.com</span>' + tag + '</span>' + right +
+            '</div>' +
+            '<div class="vars" id="vars-' + idx + '" style="display:none"></div>';
+  });
+  out.innerHTML = html;
+}
+
+async function findVars(name, idx, btn) {
+  const box = document.getElementById('vars-' + idx);
+  btn.disabled = true; btn.textContent = 'Searching…';
+  box.style.display = 'block';
+  box.innerHTML = '<div class="vnote"><span class="spin"></span>Looking for open variations of ' + esc(name) + '…</div>';
+
+  try {
+    const resp = await fetch('/variations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if (!resp.ok) throw new Error('server ' + resp.status);
+    const data = await resp.json();
+    const avail = (data.results || []).filter(r => r.status === 'available');
+    if (!avail.length) {
+      box.innerHTML = '<div class="vnote">No open variations found — try generating from a different idea.</div>';
+    } else {
+      box.innerHTML = avail.map(r => {
+        const n = esc(r.name);
+        return '<div class="vrow">' +
+                 '<span class="domain">' + n + '<span class="tld">.com</span></span>' +
+                 '<span class="pill ok">Available</span>' +
+                 '<a class="claim" href="' + REGISTRAR + n + '.com" target="_blank" rel="noopener">Claim &rarr;</a>' +
+               '</div>';
+      }).join('');
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="vnote">Couldn\'t check variations right now.</div>';
+  } finally {
+    btn.textContent = 'Variations'; btn.disabled = false;
+  }
+}
+</script>
+</html>
